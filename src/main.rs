@@ -1,6 +1,7 @@
 use anyhow::{bail, Result};
 use scraper::element_ref::Select;
 use scraper::ElementRef;
+use std::fmt;
 use std::fs::File;
 use std::io::Read;
 use unicode_segmentation::UnicodeSegmentation;
@@ -102,6 +103,19 @@ impl Log {
     }
 }
 
+impl fmt::Display for Log {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut s = String::new();
+        s.push_str(&format!("tab:{}\n", self.tab));
+        s.push_str(&format!("name:{}\n", self.name));
+        for (i, text) in self.texts.iter().enumerate() {
+            s.push_str(&format!("{}:{}\n", i, text));
+        }
+
+        write!(f, "{s}")
+    }
+}
+
 fn main() {
     let filename = "data/Log.html";
     // let mut file = File::open(config.filename)?;
@@ -120,6 +134,8 @@ fn main() {
     // セレクターを用いて要素を取得
     let p_tags = document.select(&p_selector);
 
+    let mut logs = Vec::new();
+
     // 一つのpタグに一つのチャットが入っている
     for p_tag in p_tags {
         let span_tags = p_tag.select(&span_selector);
@@ -128,13 +144,8 @@ fn main() {
             Ok(log) => log,
             Err(e) => panic!("{e}"),
         };
+        println!("{log}");
 
-        println!("tab:{}", log.tab);
-        println!("name:{}", log.name);
-        for (i, text) in log.texts.iter().enumerate() {
-            println!("{}:{}", i, text);
-        }
-
-        println!();
+        logs.push(log)
     }
 }
