@@ -6,6 +6,7 @@ use std::io::Read;
 
 pub mod error;
 pub mod log;
+pub mod log_summary;
 
 pub fn get_logs(filename: &str) -> Result<Vec<Log>, Error> {
     let mut file = File::open(filename)?;
@@ -22,6 +23,8 @@ pub fn get_logs(filename: &str) -> Result<Vec<Log>, Error> {
     // セレクターを用いて要素を取得
     let p_tags = document.select(&p_selector);
     let mut logs = Vec::new();
+
+    // todo:---start---まで読み飛ばし
 
     // 一つのpタグに一つのチャットが入っている
     for p_tag in p_tags {

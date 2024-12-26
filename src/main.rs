@@ -1,8 +1,9 @@
 use ccfolia_log_parser::error::Error;
 use ccfolia_log_parser::get_logs;
+use ccfolia_log_parser::log_summary::LogSummary;
 
 fn main() {
-    let filename = "data/log.html";
+    let filename = "data/log3.html";
     let logs = match get_logs(filename) {
         Ok(logs) => logs,
         Err(e) => match e {
@@ -14,7 +15,11 @@ fn main() {
             }
         },
     };
-    for log in logs {
-        println!("{}", log);
-    }
+
+    // for log in &logs {
+    //     println!("{}", log);
+    // }
+
+    let log_summary = LogSummary::new(&logs);
+    println!("{}", log_summary);
 }
