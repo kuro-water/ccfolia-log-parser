@@ -14,48 +14,7 @@ struct Log {
 }
 
 impl Log {
-    fn get_tab(span_tag: Option<ElementRef>) -> Result<String> {
-        let Some(span_tag) = span_tag else {
-            // span_tags.next()がNoneの場合ここに入る
-            panic!("タブを格納するspanタグが見つかりません");
-        };
-        let texts = span_tag.text().collect::<Vec<_>>();
-        if texts.len() != 1 {
-            panic!("タブ名が1行ではなく{}行あります", texts.len());
-        }
-        match Log::validate_tab(texts[0].to_string()) {
-            Ok(tab) => Ok(tab),
-            Err(e) => {
-                panic!("{}タブの解析中にエラーが発生しました：{}", texts[0], e);
-            }
-        }
-    }
-
-    fn get_name(span_tag: Option<ElementRef>) -> Result<String> {
-        let Some(name) = span_tag else {
-            panic!("名前を格納するspanタグが見つかりません");
-        };
-        let texts = name.text().collect::<Vec<_>>();
-        if texts.len() != 1 {
-            panic!("名前が1行ではなく{}行あります", texts.len());
-        }
-        Ok(texts[0].trim().replace("\n", ""))
-    }
-
-    fn get_texts(span_tag: Option<ElementRef>) -> Result<Vec<String>> {
-        let Some(texts) = span_tag else {
-            panic!("テキストを格納するspanタグが見つかりません");
-        };
-        let texts = texts.text().collect::<Vec<_>>();
-        let mut vec = Vec::new();
-        for text in texts.iter() {
-            let text = text.trim().replace("\n", "");
-            vec.push(text);
-        }
-        Ok(vec)
-    }
-
-    fn new(mut span_tags: Select) -> Log {
+    pub fn new(mut span_tags: Select) -> Log {
         // タブ
         let tab = match Log::get_tab(span_tags.next()) {
             Ok(tab) => tab,
@@ -99,6 +58,47 @@ impl Log {
 
         // []を削除
         Ok(graphemes[1..graphemes.len() - 1].concat())
+    }
+
+    fn get_tab(span_tag: Option<ElementRef>) -> Result<String> {
+        let Some(span_tag) = span_tag else {
+            // span_tags.next()がNoneの場合ここに入る
+            panic!("タブを格納するspanタグが見つかりません");
+        };
+        let texts = span_tag.text().collect::<Vec<_>>();
+        if texts.len() != 1 {
+            panic!("タブ名が1行ではなく{}行あります", texts.len());
+        }
+        match Log::validate_tab(texts[0].to_string()) {
+            Ok(tab) => Ok(tab),
+            Err(e) => {
+                panic!("{}タブの解析中にエラーが発生しました：{}", texts[0], e);
+            }
+        }
+    }
+
+    fn get_name(span_tag: Option<ElementRef>) -> Result<String> {
+        let Some(name) = span_tag else {
+            panic!("名前を格納するspanタグが見つかりません");
+        };
+        let texts = name.text().collect::<Vec<_>>();
+        if texts.len() != 1 {
+            panic!("名前が1行ではなく{}行あります", texts.len());
+        }
+        Ok(texts[0].trim().replace("\n", ""))
+    }
+
+    fn get_texts(span_tag: Option<ElementRef>) -> Result<Vec<String>> {
+        let Some(texts) = span_tag else {
+            panic!("テキストを格納するspanタグが見つかりません");
+        };
+        let texts = texts.text().collect::<Vec<_>>();
+        let mut vec = Vec::new();
+        for text in texts.iter() {
+            let text = text.trim().replace("\n", "");
+            vec.push(text);
+        }
+        Ok(vec)
     }
 }
 
