@@ -1,6 +1,8 @@
 use crate::log::Log;
+use crate::log_summary::LogSummary;
 use error::Error;
 use scraper::{Html, Selector};
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::Read;
 
@@ -33,4 +35,28 @@ pub fn get_logs(filename: &str) -> Result<Vec<Log>, Error> {
         logs.push(log)
     }
     Ok(logs)
+}
+
+pub fn get_log_summary(logs: &Vec<Log>) -> LogSummary {
+    LogSummary::new(logs.iter().collect())
+}
+
+pub fn get_pc_summary(logs: &Vec<Log>) -> HashMap<String, LogSummary> {
+    let names: HashSet<_> = logs.iter().map(|log| log.name.clone()).collect();
+    let mut map = HashMap::new();
+    for name in names {
+        let logs: Vec<&Log> = logs.iter().filter(|log| log.name == name).collect();
+        let log_summary = LogSummary::new(logs);
+
+        let mut count = 0;
+        count += log_summary.successes.iter().count();
+        count += log_summary.failures.iter().count();
+        count += log_summary.criticals.iter().count();
+        count += log_summary.fumbles.iter().count();
+        if count == 0 {
+            continue;
+        }
+        map.insert(name, log_summary);
+    }
+    map
 }

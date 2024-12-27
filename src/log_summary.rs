@@ -2,7 +2,6 @@ use crate::log::Log;
 use std::fmt::{Display, Formatter};
 
 pub struct LogSummary<'a> {
-    pub logs: &'a Vec<Log>,
     pub successes: Vec<&'a Log>,
     pub failures: Vec<&'a Log>,
     pub criticals: Vec<&'a Log>,
@@ -10,7 +9,7 @@ pub struct LogSummary<'a> {
 }
 
 impl<'a> LogSummary<'a> {
-    pub fn new(logs: &Vec<Log>) -> LogSummary {
+    pub fn new(logs: Vec<&'a Log>) -> LogSummary<'a> {
         let successes: Vec<_> = logs
             .iter()
             .filter(|log| {
@@ -19,6 +18,7 @@ impl<'a> LogSummary<'a> {
                         && !text.contains("決定的成功")
                 })
             })
+            .map(|log| log.clone())
             .collect();
 
         let failures: Vec<_> = logs
@@ -28,30 +28,30 @@ impl<'a> LogSummary<'a> {
                     .iter()
                     .any(|text| text.contains("失敗") && !text.contains("致命的失敗"))
             })
+            .map(|log| log.clone())
             .collect();
 
         let criticals: Vec<_> = logs
             .iter()
             .filter(|log| log.texts.iter().any(|text| text.contains("決定的成功")))
+            .map(|log| log.clone())
             .collect();
 
         let fumbles: Vec<_> = logs
             .iter()
             .filter(|log| log.texts.iter().any(|text| text.contains("致命的失敗")))
+            .map(|log| log.clone())
             .collect();
 
         LogSummary {
-            logs,
             successes,
             failures,
             criticals,
             fumbles,
         }
     }
-}
 
-impl Display for LogSummary<'_> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    pub fn print_log(&self) -> String {
         let mut s = String::new();
         s.push_str("----- 通常成功 -----\n");
         for success in &self.successes {
@@ -69,7 +69,13 @@ impl Display for LogSummary<'_> {
         for fumble in &self.fumbles {
             s.push_str(&format!("{}", fumble));
         }
+        s
+    }
+}
 
+impl Display for LogSummary<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut s = String::new();
         s.push_str("----- 総計 -----\n");
         s.push_str(&format!("通常成功：{}\n", self.successes.iter().count()));
         s.push_str(&format!("通常失敗：{}\n", self.failures.iter().count()));

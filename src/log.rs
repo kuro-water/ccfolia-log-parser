@@ -4,6 +4,7 @@ use scraper::ElementRef;
 use std::fmt;
 use unicode_segmentation::UnicodeSegmentation;
 
+#[derive(Clone)]
 pub struct Log {
     pub tab: String,
     pub name: String,
