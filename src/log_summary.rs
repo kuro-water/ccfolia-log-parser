@@ -18,7 +18,7 @@ impl<'a> LogSummary<'a> {
                         && !text.contains("決定的成功")
                 })
             })
-            .map(|log| log.clone())
+            .map(|log| *log)
             .collect();
 
         let failures: Vec<_> = logs
@@ -28,19 +28,19 @@ impl<'a> LogSummary<'a> {
                     .iter()
                     .any(|text| text.contains("失敗") && !text.contains("致命的失敗"))
             })
-            .map(|log| log.clone())
+            .map(|log| *log)
             .collect();
 
         let criticals: Vec<_> = logs
             .iter()
             .filter(|log| log.texts.iter().any(|text| text.contains("決定的成功")))
-            .map(|log| log.clone())
+            .map(|log| *log)
             .collect();
 
         let fumbles: Vec<_> = logs
             .iter()
             .filter(|log| log.texts.iter().any(|text| text.contains("致命的失敗")))
-            .map(|log| log.clone())
+            .map(|log| *log)
             .collect();
 
         LogSummary {
@@ -76,7 +76,7 @@ impl<'a> LogSummary<'a> {
 impl Display for LogSummary<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut s = String::new();
-        s.push_str("----- 総計 -----\n");
+        // s.push_str("----- 総計 -----\n");
         s.push_str(&format!("通常成功：{}\n", self.successes.iter().count()));
         s.push_str(&format!("通常失敗：{}\n", self.failures.iter().count()));
         s.push_str(&format!(

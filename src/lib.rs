@@ -1,8 +1,9 @@
 use crate::log::Log;
 use crate::log_summary::LogSummary;
-use error::Error;
+use error::MyError;
 use scraper::{Html, Selector};
 use std::collections::{HashMap, HashSet};
+use std::env::Args;
 use std::fs::File;
 use std::io::Read;
 
@@ -10,8 +11,18 @@ pub mod error;
 pub mod log;
 pub mod log_summary;
 
-pub fn get_logs(filename: &str) -> Result<Vec<Log>, Error> {
-    let mut file = File::open(filename)?;
+pub fn get_logs(mut args: Args) -> Result<Vec<Log>, MyError> {
+    let default = "data/logg3.html".to_string();
+
+    // argsのチェック
+    let filename = if args.len() == 2 {
+        args.next();
+        args.next().unwrap_or_else(|| default)
+    } else {
+        default
+    };
+
+    let mut file = File::open(&filename)?;
     let mut html = String::new();
     file.read_to_string(&mut html)?;
 
@@ -26,12 +37,16 @@ pub fn get_logs(filename: &str) -> Result<Vec<Log>, Error> {
     let p_tags = document.select(&p_selector);
     let mut logs = Vec::new();
 
-    // todo:---start---まで読み飛ばし
-
     // 一つのpタグに一つのチャットが入っている
     for p_tag in p_tags {
         let span_tags = p_tag.select(&span_selector);
         let log = Log::new(span_tags)?;
+
+        // ---start---以前は無視する
+        if log.texts.len() == 1 && log.texts[0] == "---start---" {
+            logs = Vec::new();
+        }
+
         logs.push(log)
     }
     Ok(logs)
