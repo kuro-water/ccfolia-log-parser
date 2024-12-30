@@ -12,7 +12,7 @@ pub mod log;
 pub mod log_summary;
 
 pub fn get_logs(mut args: Args) -> Result<Vec<Log>, MyError> {
-    let default = "data/logg3.html".to_string();
+    let default = "data/log5.html".to_string();
 
     // argsのチェック
     let filename = if args.len() == 2 {
