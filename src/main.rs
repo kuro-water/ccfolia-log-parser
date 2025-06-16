@@ -28,14 +28,22 @@ fn main() {
 
     let log_summary_by_name = get_pc_summary(&original_logs);
 
-    println!("どの結果の技能一覧を表示しますか？");
+    // Initial Display Loop (Counts Only)
+    println!("--- 各プレイヤーの集計結果 ---");
+    for (name, log_summary) in &log_summary_by_name {
+        println!("{}：\n{}", name, log_summary.to_string()); // Uses Display trait
+    }
+    println!("---------------------------\n");
+
+    // User Input Section
+    println!("どの結果の技能一覧を詳しく見ますか？");
     println!("1: 成功");
     println!("2: 失敗");
     println!("3: クリティカル");
     println!("4: ファンブル");
-    println!("5: 表示しない");
+    println!("5: 詳細を見ない");
     print!("入力してください：");
-    io::stdout().flush().unwrap(); // Ensure the prompt is displayed before input
+    io::stdout().flush().unwrap();
 
     let mut choice_str = String::new();
     io::stdin()
@@ -44,32 +52,41 @@ fn main() {
 
     let chosen_skill_display_index: Option<usize> = match choice_str.trim().parse::<u32>() {
         Ok(n) => match n {
-            1 => Some(UserChoice::Success as usize), // 0
-            2 => Some(UserChoice::Failure as usize), // 1
-            3 => Some(UserChoice::Critical as usize), // 2
-            4 => Some(UserChoice::Fumble as usize),   // 3
+            1 => Some(0), // Success
+            2 => Some(1), // Failure
+            3 => Some(2), // Critical
+            4 => Some(3), // Fumble
             5 => None,
             _ => {
-                println!("無効な選択です。技能一覧は表示されません。");
+                println!("無効な選択です。詳細表示をスキップします。");
                 None
             }
         },
         Err(_) => {
-            println!("無効な入力です。技能一覧は表示されません。");
+            println!("無効な入力です。詳細表示をスキップします。");
             None
         }
     };
 
-    for (name, log_summary) in log_summary_by_name {
-        // Now using format_with_skills
-        println!(
-            "{}：\n{}",
-            name,
-            log_summary.format_with_skills(chosen_skill_display_index)
-        );
+    // Conditional Skill Display Loop
+    if let Some(index) = chosen_skill_display_index {
+        if let Some(user_choice) = UserChoice::from_index(index) {
+            let category_name = user_choice.to_display_string();
+            println!("\n--- {}の技能詳細 ---", category_name);
+            for (name, log_summary) in &log_summary_by_name {
+                let skills_output = log_summary.format_chosen_skills_only(index);
+                println!("{}：\n{}", name, skills_output);
+            }
+            println!("---------------------------");
+        } else {
+            // This case should ideally not be reached if parsing logic is correct
+            println!("内部エラー: 無効なインデックスが処理されました。");
+        }
+    } else {
+        println!("詳細表示をスキップします。");
     }
 
-    println!("Enterキーで終了します");
+    println!("\nEnterキーで終了します");
     let mut a = "".to_string();
     io::stdin().read_line(&mut a).expect("Failed to read line");
 }

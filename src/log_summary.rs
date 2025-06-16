@@ -30,6 +30,27 @@ pub enum UserChoice {
     Fumble,
 }
 
+impl UserChoice {
+    pub fn to_display_string(&self) -> &str {
+        match self {
+            UserChoice::Success => "成功",
+            UserChoice::Failure => "失敗",
+            UserChoice::Critical => "クリティカル",
+            UserChoice::Fumble => "ファンブル",
+        }
+    }
+
+    pub fn from_index(index: usize) -> Option<UserChoice> {
+        match index {
+            0 => Some(UserChoice::Success),
+            1 => Some(UserChoice::Failure),
+            2 => Some(UserChoice::Critical),
+            3 => Some(UserChoice::Fumble),
+            _ => None,
+        }
+    }
+}
+
 pub struct LogSummary<'a> {
     pub successes: Vec<&'a Log>,
     pub failures: Vec<&'a Log>,
@@ -132,21 +153,42 @@ impl<'a> LogSummary<'a> {
         }
         s
     }
+
+    pub fn format_chosen_skills_only(&self, chosen_result_index: usize) -> String {
+        let user_choice = match UserChoice::from_index(chosen_result_index) {
+            Some(choice) => choice,
+            None => return String::new(), // Or some error string / specific handling
+        };
+
+        let logs_to_process = match user_choice {
+            UserChoice::Success => &self.successes,
+            UserChoice::Failure => &self.failures,
+            UserChoice::Critical => &self.criticals,
+            UserChoice::Fumble => &self.fumbles,
+        };
+
+        let skills_map = extract_skills_for_logs(logs_to_process);
+        let result_type_display_string = user_choice.to_display_string();
+
+        if skills_map.is_empty() {
+            format!("  {}した技能: なし", result_type_display_string)
+        } else {
+            let mut sorted_skills: Vec<String> = skills_map
+                .iter()
+                .map(|(skill, count)| format!("《{}》（{}回）", skill, count))
+                .collect();
+            sorted_skills.sort(); // Sort for consistent output order
+            let joined_skill_list_str = sorted_skills.join(", ");
+            format!(
+                "  {}した技能: {}",
+                result_type_display_string, joined_skill_list_str
+            )
+        }
+    }
 }
 
 impl Display for LogSummary<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        // let mut s = String::new();
-        // // s.push_str("----- 総計 -----\n");
-        // s.push_str(&format!("通常成功：{}\n", self.successes.iter().count()));
-        // s.push_str(&format!("通常失敗：{}\n", self.failures.iter().count()));
-        // s.push_str(&format!(
-        //     "クリティカル：{}\n",
-        //     self.criticals.iter().count()
-        // ));
-        // s.push_str(&format!("ファンブル：{}\n", self.fumbles.iter().count()));
-        //
-        // write!(f, "{}", s)
         write!(f, "{}", self.format_with_skills(None))
     }
 }
@@ -405,5 +447,76 @@ mod tests {
         let output = summary.format_with_skills(Some(99)); // Invalid index
         let expected = "通常成功：0\n通常失敗：0\nクリティカル：0\nファンブル：0\n";
         assert_eq!(output, expected);
+    }
+
+    // Tests for format_chosen_skills_only
+    #[test]
+    fn test_format_chosen_skills_criticals_present() {
+        let crit_log1 = Log {
+            tab: "メイン".to_string(),
+            name: "PC1".to_string(),
+            texts: vec!["CCB<=25 【目星】 (1D100<=25) ＞ 1 ＞ 決定的成功".to_string()],
+        };
+        let crit_log2 = Log {
+            tab: "メイン".to_string(),
+            name: "PC1".to_string(),
+            texts: vec!["CCB<=5 【ブラフ】 (1D100<=5) ＞ 1 ＞ スペシャル".to_string()],
+        };
+        let summary = create_test_summary(vec![], vec![], vec![&crit_log1, &crit_log2], vec![]);
+        let output = summary.format_chosen_skills_only(UserChoice::Critical as usize);
+        // Skills are sorted: "CCB<=25 【目星】 (1D100<=25)" and "CCB<=5 【ブラフ】 (1D100<=5)"
+        // "CCB<=25..." comes before "CCB<=5..." alphabetically
+        let expected = "  クリティカルした技能: 《CCB<=25 【目星】 (1D100<=25)》（1回）, 《CCB<=5 【ブラフ】 (1D100<=5)》（1回）";
+        assert_eq!(output, expected);
+    }
+
+    #[test]
+    fn test_format_chosen_skills_successes_none_extractable() {
+        let success_log_no_gt = Log {
+            tab: "メイン".to_string(),
+            name: "PC1".to_string(),
+            texts: vec!["CCB<=80 (1D100<=80) = 50 = 成功".to_string()], // No '＞'
+        };
+        let summary = create_test_summary(vec![&success_log_no_gt], vec![], vec![], vec![]);
+        let output = summary.format_chosen_skills_only(UserChoice::Success as usize);
+        assert_eq!(output, "  成功した技能: なし");
+    }
+
+    #[test]
+    fn test_format_chosen_skills_fumbles_with_skills_sorted() {
+        let fumble1 = Log {
+            tab: "メイン".to_string(),
+            name: "PC1".to_string(),
+            texts: vec!["CCB<=71 【応急手当】 (1D100<=71) ＞ 96 ＞ 致命的失敗".to_string()],
+        };
+        let fumble2 = Log {
+            tab: "メイン".to_string(),
+            name: "PC1".to_string(),
+            texts: vec!["CCB<=50 【回避】 (1D100<=50) ＞ 100 ＞ 致命的失敗".to_string()],
+        };
+         let fumble3 = Log { // Duplicate of fumble2's skill text to test count
+            tab: "メイン".to_string(),
+            name: "PC2".to_string(),
+            texts: vec!["CCB<=50 【回避】 (1D100<=50) ＞ 99 ＞ 致命的失敗".to_string()],
+        };
+        let summary = create_test_summary(vec![], vec![], vec![], vec![&fumble1, &fumble2, &fumble3]);
+        let output = summary.format_chosen_skills_only(UserChoice::Fumble as usize);
+        // Expected sorted: 《CCB<=50 【回避】 (1D100<=50)》（2回）, 《CCB<=71 【応急手当】 (1D100<=71)》（1回）
+        let expected = "  ファンブルした技能: 《CCB<=50 【回避】 (1D100<=50)》（2回）, 《CCB<=71 【応急手当】 (1D100<=71)》（1回）";
+        assert_eq!(output, expected);
+    }
+
+    #[test]
+    fn test_format_chosen_skills_empty_category() {
+        let summary = create_test_summary(vec![], vec![], vec![], vec![]); // No failure logs
+        let output = summary.format_chosen_skills_only(UserChoice::Failure as usize);
+        assert_eq!(output, "  失敗した技能: なし");
+    }
+
+    #[test]
+    fn test_format_chosen_skills_invalid_index() {
+        let summary = create_test_summary(vec![], vec![], vec![], vec![]);
+        let output = summary.format_chosen_skills_only(99); // Invalid index
+        assert_eq!(output, ""); // Expects empty string as per current implementation
     }
 }
